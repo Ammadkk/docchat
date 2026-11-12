@@ -1,0 +1,9 @@
+[project]
+name = "docchat-backend"
+version = "0.1.0"
+description = "Chat with your PDFs: local RAG with cited answers (FastAPI + Ollama + Chroma)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

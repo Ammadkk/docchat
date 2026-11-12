@@ -1,0 +1,14 @@
+[
+  {
+    "question": "Replace with a question whose answer is in one of your PDFs",
+    "expected_answer": "The short correct answer",
+    "filename": "your-document.pdf",
+    "page": 3
+  },
+  {
+    "question": "A question whose answer is NOT in any document (tests the not-found guard)",
+    "expected_answer": "NOT_FOUND",
+    "filename": null,
+    "page": null
+  }
+]
