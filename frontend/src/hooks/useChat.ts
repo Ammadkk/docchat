@@ -10,6 +10,7 @@ export interface ChatMessage {
   pending?: boolean;
   error?: string;
   notFound?: boolean;
+  cached?: boolean;
 }
 
 const uid = () => Math.random().toString(36).slice(2);
@@ -47,6 +48,7 @@ export function useChat() {
                 content: r.answer,
                 sources: r.sources,
                 notFound: r.not_found,
+                cached: r.cached,
                 pending: false,
               })),
             onError: (message) => update((m) => ({ ...m, pending: false, error: message })),

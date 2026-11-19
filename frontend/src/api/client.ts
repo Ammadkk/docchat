@@ -29,6 +29,7 @@ export interface ChatResult {
   sources: Source[];
   standalone_question: string;
   not_found: boolean;
+  cached?: boolean;
 }
 
 export interface ConversationSummary {

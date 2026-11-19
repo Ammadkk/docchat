@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AlertCircle, SearchX } from "lucide-react";
+import { AlertCircle, SearchX, Zap } from "lucide-react";
 import type { ChatMessage } from "../hooks/useChat";
 import { cn } from "../lib/utils";
 import { CitationChip, type PdfTarget } from "./CitationChip";
@@ -74,6 +74,15 @@ function MessageBubbleImpl({ message, onOpen }: Props) {
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <span>{message.error}</span>
         </div>
+      )}
+
+      {message.cached && !message.pending && (
+        <span
+          className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+          title="A question with the same meaning was answered before, so this answer came from the semantic cache"
+        >
+          <Zap className="size-3" /> cached
+        </span>
       )}
 
       {!message.pending && !message.notFound && (
