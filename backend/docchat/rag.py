@@ -2,8 +2,9 @@
 
 from collections.abc import Iterator
 
-from . import citations
+from . import citations, semantic_cache
 from .config import settings
+from .embeddings import embed_query
 from .llm import LLM, get_llm
 from .prompts import NOT_FOUND_MESSAGE, NOT_FOUND_TOKEN, answer_messages, rewrite_messages
 from .retriever import retrieve
@@ -46,12 +47,35 @@ def answer_stream(
     history: list[dict] | None = None,
     doc_ids: list[str] | None = None,
     llm: LLM | None = None,
+    use_cache: bool | None = None,
 ) -> Iterator[dict]:
     """Yields events: {"type": "token", "data": str}, then
-    {"type": "done", "data": {"answer", "sources", "standalone_question", "not_found"}}."""
+    {"type": "done", "data": {"answer", "sources", "standalone_question", "not_found", "cached"}}."""
     llm = llm or get_llm()
+    use_cache = settings.semantic_cache_enabled if use_cache is None else use_cache
     standalone = rewrite_question(llm, question, history or [])
-    chunks, best_similarity = retrieve(standalone, doc_ids)
+    query_embedding = embed_query(standalone)  # shared by the cache lookup and retrieval
+    scope = semantic_cache.scope_key(doc_ids)
+
+    # Semantic cache: a question that means the same as an earlier one gets the
+    # earlier answer instantly, without retrieval or the LLM.
+    if use_cache:
+        hit = semantic_cache.lookup(query_embedding, scope, standalone)
+        if hit:
+            yield {"type": "token", "data": hit["answer"]}
+            yield {
+                "type": "done",
+                "data": {
+                    "answer": hit["answer"],
+                    "sources": hit["sources"],
+                    "standalone_question": standalone,
+                    "not_found": False,
+                    "cached": True,
+                },
+            }
+            return
+
+    chunks, best_similarity = retrieve(standalone, doc_ids, query_embedding=query_embedding)
 
     def not_found() -> Iterator[dict]:
         yield {"type": "token", "data": NOT_FOUND_MESSAGE}
@@ -62,6 +86,7 @@ def answer_stream(
                 "sources": [],
                 "standalone_question": standalone,
                 "not_found": True,
+                "cached": False,
             },
         }
 
@@ -98,22 +123,28 @@ def answer_stream(
         yield {"type": "token", "data": buffer}
 
     answer = citations.strip_invalid(full.strip(), len(chunks))
+    sources = build_sources(answer, chunks)
+    # Only complete, grounded answers are cached. Not-found answers are already instant,
+    # and a stopped stream never gets here.
+    if use_cache:
+        semantic_cache.store(query_embedding, standalone, scope, answer, sources)
     yield {
         "type": "done",
         "data": {
             "answer": answer,
-            "sources": build_sources(answer, chunks),
+            "sources": sources,
             "standalone_question": standalone,
             "not_found": False,
+            "cached": False,
         },
     }
 
 
 def answer(question: str, history: list[dict] | None = None, doc_ids: list[str] | None = None,
-           llm: LLM | None = None) -> dict:
+           llm: LLM | None = None, use_cache: bool | None = None) -> dict:
     """Non-streaming convenience wrapper (used by the CLI and evals)."""
     result: dict = {}
-    for event in answer_stream(question, history, doc_ids, llm):
+    for event in answer_stream(question, history, doc_ids, llm, use_cache):
         if event["type"] == "done":
             result = event["data"]
     return result

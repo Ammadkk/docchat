@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session, select
 
 from db import get_session
-from docchat import vector_store
+from docchat import semantic_cache, vector_store
 from docchat.bm25_index import bm25_index
 from docchat.config import settings
 from ingest import ingest_document
@@ -91,6 +91,7 @@ def delete_document(doc_id: str, session: Session = Depends(get_session)):
         raise HTTPException(404, "Document not found")
     vector_store.delete_document(doc_id)
     bm25_index.invalidate()
+    semantic_cache.clear()
     Path(doc.path).unlink(missing_ok=True)
     session.delete(doc)
     session.commit()

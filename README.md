@@ -12,6 +12,7 @@ Built from scratch, with no LangChain or LlamaIndex, so every stage of the RAG p
 - **Honest "not found".** Two guards stop hallucinated answers: a similarity threshold before the LLM is called, and a `NOT_FOUND` sentinel the model can return.
 - **Citation checking.** Each cited sentence is compared with its source chunk. Weakly supported claims are flagged as *low confidence*.
 - **Hybrid search.** Dense vectors (bge-small) plus BM25 keyword search, merged with Reciprocal Rank Fusion. An optional cross-encoder reranker can be switched on.
+- **Semantic cache.** A question that means the same as an earlier one ("How long is the warranty period?" after "How long is the warranty?") gets the earlier answer instantly, without calling the LLM. A strict 0.93 similarity threshold, per-document-selection scoping and a "numbers must match" rule keep "revenue in 2023" from returning the 2024 answer. The cache is cleared whenever a PDF is added or removed.
 - **Follow-up questions.** "What about the second one?" is rewritten into a standalone question using the chat history.
 - **Streaming answers** over Server-Sent Events, with a Stop button.
 - **Document filter.** You can limit questions to selected PDFs.
@@ -25,6 +26,7 @@ INGEST   PDF ─► text per page (PyMuPDF) ─► ~500-token chunks with overla
              ─► embeddings (bge-small, ONNX) ─► ChromaDB  +  BM25 keyword index
 
 ASK      question ─► (follow-up? rewrite with chat history)
+                  ─► semantic cache: same meaning asked before? ─► return cached answer
                   ─► dense top-20  +  BM25 top-20 ─► Reciprocal Rank Fusion ─► [rerank] ─► top 5
                   ─► best match too weak? ─► "I couldn't find that in your documents."
                   ─► LLM answers using numbered sources [1]..[5], streamed token by token
@@ -116,6 +118,8 @@ All settings are optional environment variables in `backend/.env` (see [`.env.ex
 | `DOCCHAT_TOP_K` | `5` | Chunks sent to the LLM |
 | `DOCCHAT_CHUNK_TOKENS` | `500` | Chunk size in tokens |
 | `DOCCHAT_MIN_SIMILARITY` | `0.45` | Below this, the app answers "not found" without calling the LLM |
+| `DOCCHAT_SEMANTIC_CACHE_ENABLED` | `true` | Reuse answers for questions with the same meaning |
+| `DOCCHAT_SEMANTIC_CACHE_THRESHOLD` | `0.93` | How similar two questions must be to share an answer (lower = more hits, more risk) |
 | `DOCCHAT_MODEL_BACKEND` | `onnx` | `onnx` (no PyTorch) or `torch` (needs `pip install sentence-transformers`) |
 
 ## Testing and evals
@@ -152,7 +156,7 @@ backend/
   ingest.py            PDF → chunks → embeddings → Chroma (runs in the background)
   docchat/             RAG core, no web framework:
     chunker.py, embeddings.py, onnx_models.py, vector_store.py, bm25_index.py,
-    retriever.py, llm.py, prompts.py, citations.py, rag.py
+    retriever.py, semantic_cache.py, llm.py, prompts.py, citations.py, rag.py
   tests/, evals/
 frontend/src/
   api/client.ts        typed API client and SSE parser

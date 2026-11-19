@@ -14,13 +14,18 @@ _COLLECTION = "chunks"
 _ADD_BATCH = 1000
 
 
-def _collection():
+def get_client():
+    """Shared persistent Chroma client (also used by the semantic answer cache)."""
     global _client
     with _lock:
         if _client is None:
             settings.ensure_dirs()
             _client = chromadb.PersistentClient(path=str(settings.chroma_dir))
-    return _client.get_or_create_collection(
+    return _client
+
+
+def _collection():
+    return get_client().get_or_create_collection(
         _COLLECTION, metadata={"hnsw:space": "cosine"}, embedding_function=None
     )
 

@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     min_similarity: float = 0.45  # below this → "not found" without calling the LLM
     low_confidence_threshold: float = 0.55  # citation support below this is flagged
 
+    # Semantic cache: reuse an earlier answer when a new question means the same thing
+    semantic_cache_enabled: bool = True
+    # Cosine similarity between standalone questions (bge-small). Measured: paraphrases
+    # 0.89-0.99, but "revenue in 2023" vs "2024" is 0.90 and "advantages" vs
+    # "disadvantages" 0.87, so stay above ~0.92. Questions with different numbers never match.
+    semantic_cache_threshold: float = 0.93
+
     history_turns: int = 6  # prior messages used for follow-up question rewriting
 
     @property

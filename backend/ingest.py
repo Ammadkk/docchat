@@ -5,7 +5,7 @@ import logging
 from sqlmodel import Session, select
 
 from db import engine
-from docchat import vector_store
+from docchat import semantic_cache, vector_store
 from docchat.bm25_index import bm25_index
 from docchat.chunker import chunk_pages
 from docchat.config import settings
@@ -33,6 +33,7 @@ def ingest_document(doc_id: str) -> None:
             vector_store.delete_document(doc.id)  # idempotent re-ingest
             vector_store.add_chunks(doc.id, doc.filename, chunks, embeddings)
             bm25_index.invalidate()
+            semantic_cache.clear()  # a new document can change the best answer
             doc.chunk_count = len(chunks)
             doc.status = "ready"
             doc.error = None

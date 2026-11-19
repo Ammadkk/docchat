@@ -188,6 +188,11 @@ C:\docchat
 
 ### 🔲 Remaining work
 
+**Semantic cache (2026-11-20)**
+- [x] `docchat/semantic_cache.py`: a second Chroma collection `answer_cache`, keyed on the standalone question's embedding and scoped by document selection. It's cleared on every upload or delete.
+- [x] Threshold 0.93, chosen from measurements with bge-small: paraphrases 0.89–0.99, but "revenue 2023 vs 2024" 0.90 and "advantages vs disadvantages" 0.87. Questions with different numbers never match.
+- [x] Evals bypass the cache. The UI shows a "⚡ cached" pill. 11 new tests (26 total).
+
 **Step A2: Needs Ollama (you)**
 1. Install Ollama (https://ollama.com/download), then `ollama pull llama3.1:8b` (or `qwen2.5:3b` if RAM < 16 GB). The Ollama installer is signed, so Smart App Control should allow it.
 2. `python cli.py ingest some.pdf` then `python cli.py ask "..."`.

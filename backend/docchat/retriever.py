@@ -50,13 +50,17 @@ def retrieve(
     top_k: int | None = None,
     use_bm25: bool = True,
     use_reranker: bool | None = None,
+    query_embedding: list[float] | None = None,
 ) -> tuple[list[dict], float]:
     """Return (top chunks, best dense similarity). The similarity is used as a
-    cheap "is anything relevant here at all?" signal."""
+    cheap "is anything relevant here at all?" signal. Pass `query_embedding` if the
+    caller already embedded the question (avoids embedding it twice)."""
     top_k = top_k or settings.top_k
     use_reranker = settings.use_reranker if use_reranker is None else use_reranker
 
-    dense = vector_store.query(embed_query(question), settings.candidate_k, doc_ids)
+    if query_embedding is None:
+        query_embedding = embed_query(question)
+    dense = vector_store.query(query_embedding, settings.candidate_k, doc_ids)
     best_similarity = max((d["similarity"] for d in dense), default=0.0)
     lists = [dense]
     if use_bm25:

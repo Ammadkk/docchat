@@ -53,7 +53,7 @@ def answer_metrics(cases: list[dict]) -> dict:
     correct = faithful = cited_ok = not_found_ok = answerable = unanswerable = 0
     rows = []
     for case in cases:
-        result = answer(case["question"])
+        result = answer(case["question"], use_cache=False)  # measure the real pipeline
         if case["expected_answer"] == NOT_FOUND_TOKEN:
             unanswerable += 1
             not_found_ok += result["not_found"]
